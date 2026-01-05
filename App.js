@@ -10,6 +10,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import MainScreen from './src/screens/MainScreen';
 import HistoryScreen from './src/screens/HistoryScreen';
+import CalendarScreen from './src/screens/CalendarScreen';
 
 const theme = {
   ...DefaultTheme,
@@ -49,7 +50,8 @@ export default function App() {
       const newRecord = {
         id: Date.now().toString(),
         type,
-        timestamp: new Date().toISOString(),
+        // 如果data中有timestamp，使用自定义时间，否则使用当前时间
+        timestamp: data.timestamp || new Date().toISOString(),
         ...data,
       };
 
@@ -83,11 +85,17 @@ export default function App() {
           <MainScreen
             onSaveRecord={saveRecord}
             onNavigateToHistory={() => setCurrentScreen('history')}
+            onNavigateToCalendar={() => setCurrentScreen('calendar')}
           />
-        ) : (
+        ) : currentScreen === 'history' ? (
           <HistoryScreen
             records={records}
             onDeleteRecord={deleteRecord}
+            onNavigateBack={() => setCurrentScreen('main')}
+          />
+        ) : (
+          <CalendarScreen
+            records={records}
             onNavigateBack={() => setCurrentScreen('main')}
           />
         )}
