@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "宝宝记录",
+    "slug": "baby-tracker",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#FF6B9D"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.babytracker.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#FF6B9D"
+      },
+      "package": "com.babytracker.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "name": "宝宝记录",
+      "shortName": "宝宝记录",
+      "lang": "zh-CN",
+      "scope": "/",
+      "themeColor": "#FF6B9D",
+      "backgroundColor": "#F8F9FA"
+    }
+  }
+}
