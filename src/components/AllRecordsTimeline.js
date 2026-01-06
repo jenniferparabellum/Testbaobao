@@ -190,7 +190,7 @@ export default function AllRecordsTimeline({ records }) {
               ]}
             >
               <Text style={styles.markerLabelText}>
-                {marker.type === 'hour' ? `${marker.value}:00` : marker.value.split('/')[1]}
+                {marker.type === 'hour' ? `${String(marker.value).padStart(2, '0')}:00` : marker.value.split('/')[1]}
               </Text>
             </View>
           ))}

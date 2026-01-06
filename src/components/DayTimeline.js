@@ -92,6 +92,23 @@ export default function DayTimeline({ records, date }) {
               ]}
             />
           ))}
+          
+          {/* 小时标签（横轴时间显示） */}
+          <View style={styles.hourLabels}>
+            {hourMarkers.map((hour) => (
+              <View
+                key={`label-${hour}`}
+                style={[
+                  styles.hourLabel,
+                  { left: `${(hour / 24) * 100}%` },
+                  hour === 0 && styles.hourLabelLeft,
+                  hour === 23 && styles.hourLabelRight,
+                ]}
+              >
+                <Text style={styles.hourLabelText}>{hour}:00</Text>
+              </View>
+            ))}
+          </View>
 
           {/* 活动时间点 */}
           {dayRecords.map((record, index) => {
@@ -219,8 +236,8 @@ const styles = StyleSheet.create({
   },
   timelineContainer: {
     position: 'relative',
-    height: 80,
-    marginBottom: 40,
+    height: 100,
+    marginBottom: 50,
   },
   timelineBackground: {
     position: 'relative',
@@ -237,6 +254,29 @@ const styles = StyleSheet.create({
     width: 1,
     backgroundColor: '#E0E0E0',
     transform: [{ translateX: -0.5 }],
+  },
+  hourLabels: {
+    position: 'absolute',
+    top: 42,
+    left: 0,
+    right: 0,
+    height: 20,
+  },
+  hourLabel: {
+    position: 'absolute',
+    transform: [{ translateX: -15 }],
+    minWidth: 30,
+  },
+  hourLabelLeft: {
+    transform: [{ translateX: 0 }],
+  },
+  hourLabelRight: {
+    transform: [{ translateX: -30 }],
+  },
+  hourLabelText: {
+    fontSize: 9,
+    color: '#95A5A6',
+    fontWeight: '500',
   },
   recordContainer: {
     position: 'absolute',
