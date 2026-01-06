@@ -550,13 +550,13 @@ const styles = StyleSheet.create({
         fontWeight: '600',
     },
     diaperTypeButton: {
-        borderColor: '#FFE66D',
+        borderColor: '#C44569',
         borderWidth: 2,
         borderRadius: 8,
     },
     diaperTypeButtonLabel: {
         fontSize: 16,
-        color: '#FFE66D',
+        color: '#C44569',
         fontWeight: '600',
     },
     quickRecordButton: {
