@@ -6,6 +6,8 @@ import {
 } from 'react-native';
 import { Card, Title, Paragraph, Button, Divider, Appbar } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import DayTimeline from '../components/DayTimeline';
+import AllRecordsTimeline from '../components/AllRecordsTimeline';
 
 const getTypeIcon = (type) => {
   switch (type) {
@@ -130,8 +132,23 @@ export default function HistoryScreen({ records, onDeleteRecord, onNavigateBack 
 
   const renderSection = ({ item: date }) => {
     const dayRecords = groupedRecords[date] || [];
+    // 将日期字符串转换为Date对象
+    // date格式是 "YYYY/M/D" 或类似格式，需要正确解析
+    const dateParts = date.split('/');
+    let dateObj;
+    if (dateParts.length === 3) {
+      // 格式: YYYY/M/D
+      dateObj = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
+    } else {
+      // 尝试直接解析
+      dateObj = new Date(date);
+    }
+    
     return (
       <View style={styles.section}>
+        {/* 24小时时间轴可视化 */}
+        <DayTimeline records={records} date={dateObj} />
+        
         <View style={styles.sectionHeader}>
           <Title style={styles.sectionTitle}>{date}</Title>
           <Paragraph style={styles.sectionCount}>{dayRecords.length} 条记录</Paragraph>
@@ -177,6 +194,11 @@ export default function HistoryScreen({ records, onDeleteRecord, onNavigateBack 
         keyExtractor={(item) => item}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        ListHeaderComponent={
+          <View style={styles.allTimelineContainer}>
+            <AllRecordsTimeline records={records} />
+          </View>
+        }
       />
     </View>
   );
@@ -193,6 +215,9 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: 16,
+  },
+  allTimelineContainer: {
+    marginBottom: 16,
   },
   section: {
     marginBottom: 24,
