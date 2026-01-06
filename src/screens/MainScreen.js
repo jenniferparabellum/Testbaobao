@@ -41,14 +41,18 @@ export default function MainScreen({ onSaveRecord, onNavigateToHistory, onNaviga
         if (currentType === 'feeding' && !feedingAmount) {
             return;
         }
+        // 如果是diaper类型，必须选择类型
+        if (currentType === 'diaper' && !diaperType) {
+            return;
+        }
 
         const recordData = {};
         // 如果是feeding类型，添加奶量信息
         if (currentType === 'feeding') {
             recordData.amount = feedingAmount;
         }
-        // 如果是diaper类型且有选择类型，添加尿布类型信息
-        if (currentType === 'diaper' && diaperType) {
+        // 如果是diaper类型，添加尿布类型信息
+        if (currentType === 'diaper') {
             recordData.diaperType = diaperType;
         }
         onSaveRecord(currentType, recordData);
@@ -66,6 +70,10 @@ export default function MainScreen({ onSaveRecord, onNavigateToHistory, onNaviga
         if (currentType === 'feeding' && !feedingAmount) {
             return;
         }
+        // 如果是diaper类型，必须选择类型
+        if (currentType === 'diaper' && !diaperType) {
+            return;
+        }
 
         // 将日期时间字符串转换为ISO格式
         const timestamp = new Date(customDateTime).toISOString();
@@ -74,8 +82,8 @@ export default function MainScreen({ onSaveRecord, onNavigateToHistory, onNaviga
         if (currentType === 'feeding') {
             recordData.amount = feedingAmount;
         }
-        // 如果是diaper类型且有选择类型，添加尿布类型信息
-        if (currentType === 'diaper' && diaperType) {
+        // 如果是diaper类型，添加尿布类型信息
+        if (currentType === 'diaper') {
             recordData.diaperType = diaperType;
         }
         onSaveRecord(currentType, recordData);
@@ -231,10 +239,10 @@ export default function MainScreen({ onSaveRecord, onNavigateToHistory, onNaviga
                                 </View>
                             )}
 
-                            {/* 如果是diaper类型，显示尿布类型选择 */}
+                            {/* 如果是diaper类型，先显示类型选择 */}
                             {currentType === 'diaper' && (
                                 <View style={styles.amountContainer}>
-                                    <Paragraph style={styles.amountLabel}>选择类型：</Paragraph>
+                                    <Paragraph style={styles.amountLabel}>请先选择类型：</Paragraph>
                                     <Menu
                                         visible={diaperMenuVisible}
                                         onDismiss={() => setDiaperMenuVisible(false)}
@@ -326,8 +334,56 @@ export default function MainScreen({ onSaveRecord, onNavigateToHistory, onNaviga
                                 </View>
                             )}
 
-                            {/* 对于非feeding类型，显示原有的记录选项 */}
-                            {currentType !== 'feeding' && (
+                            {/* 对于diaper类型，只有在选择类型后才显示记录选项 */}
+                            {currentType === 'diaper' && diaperType && (
+                                <View style={styles.recordOptionsContainer}>
+                                    <Button
+                                        mode="contained"
+                                        onPress={handleQuickRecord}
+                                        style={styles.quickRecordButton}
+                                        labelStyle={styles.dialogButtonLabel}
+                                        icon="clock-outline"
+                                    >
+                                        立即记录（当前时间）
+                                    </Button>
+
+                                    <View style={styles.customRecordContainer}>
+                                        <Paragraph style={styles.customRecordLabel}>或手动输入时间：</Paragraph>
+                                        {Platform.OS === 'web' ? (
+                                            <View>
+                                                <input
+                                                    type="datetime-local"
+                                                    value={customDateTime || getDefaultDateTime()}
+                                                    onChange={(e) => setCustomDateTime(e.target.value)}
+                                                    style={styles.webDateTimeInput}
+                                                />
+                                            </View>
+                                        ) : (
+                                            <TextInput
+                                                label="日期时间 (YYYY-MM-DD HH:MM)"
+                                                value={customDateTime}
+                                                onChangeText={setCustomDateTime}
+                                                placeholder="例如: 2024-01-15 14:30"
+                                                mode="outlined"
+                                                style={styles.dateTimeInput}
+                                            />
+                                        )}
+                                        <Button
+                                            mode="contained"
+                                            onPress={handleCustomRecord}
+                                            disabled={!customDateTime}
+                                            style={[styles.customRecordButton, !customDateTime && styles.disabledButton]}
+                                            labelStyle={styles.dialogButtonLabel}
+                                            icon="calendar-clock"
+                                        >
+                                            使用自定义时间记录
+                                        </Button>
+                                    </View>
+                                </View>
+                            )}
+
+                            {/* 对于其他类型（如sleeping），显示原有的记录选项 */}
+                            {currentType !== 'feeding' && currentType !== 'diaper' && (
                                 <>
                                     <Button
                                         mode="contained"
