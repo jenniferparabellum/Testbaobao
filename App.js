@@ -32,6 +32,46 @@ export default function App() {
 
   useEffect(() => {
     loadRecords();
+    
+    // 仅在Web平台启用浏览器历史记录支持
+    if (Platform.OS === 'web') {
+      // 初始化：根据当前URL设置屏幕，或设置初始URL
+      const path = window.location.pathname;
+      if (path === '/history' || path === '/history/') {
+        setCurrentScreen('history');
+      } else if (path === '/calendar' || path === '/calendar/') {
+        setCurrentScreen('calendar');
+      } else {
+        // 确保主页面URL正确
+        if (path !== '/' && path !== '') {
+          window.history.replaceState({ screen: 'main' }, '', '/');
+        }
+      }
+
+      // 监听浏览器后退/前进按钮
+      const handlePopState = (event) => {
+        if (event.state) {
+          setCurrentScreen(event.state.screen || 'main');
+        } else {
+          // 如果没有state，根据URL判断
+          const path = window.location.pathname;
+          if (path === '/history' || path === '/history/') {
+            setCurrentScreen('history');
+          } else if (path === '/calendar' || path === '/calendar/') {
+            setCurrentScreen('calendar');
+          } else {
+            setCurrentScreen('main');
+          }
+        }
+      };
+
+      window.addEventListener('popstate', handlePopState);
+
+      // 清理函数
+      return () => {
+        window.removeEventListener('popstate', handlePopState);
+      };
+    }
   }, []);
 
   const loadRecords = async () => {
@@ -77,6 +117,21 @@ export default function App() {
     }
   };
 
+  // 导航函数，支持浏览器历史记录
+  const navigateToScreen = (screen) => {
+    setCurrentScreen(screen);
+    
+    // 在Web平台上更新浏览器历史记录
+    if (Platform.OS === 'web') {
+      const path = screen === 'main' ? '/' : `/${screen}`;
+      window.history.pushState({ screen }, '', path);
+    }
+  };
+
+  const navigateToHistory = () => navigateToScreen('history');
+  const navigateToCalendar = () => navigateToScreen('calendar');
+  const navigateToMain = () => navigateToScreen('main');
+
   return (
     <PaperProvider theme={theme}>
       <SafeAreaView style={styles.container} edges={Platform.OS === 'web' ? [] : ['top']}>
@@ -84,19 +139,19 @@ export default function App() {
         {currentScreen === 'main' ? (
           <MainScreen
             onSaveRecord={saveRecord}
-            onNavigateToHistory={() => setCurrentScreen('history')}
-            onNavigateToCalendar={() => setCurrentScreen('calendar')}
+            onNavigateToHistory={navigateToHistory}
+            onNavigateToCalendar={navigateToCalendar}
           />
         ) : currentScreen === 'history' ? (
           <HistoryScreen
             records={records}
             onDeleteRecord={deleteRecord}
-            onNavigateBack={() => setCurrentScreen('main')}
+            onNavigateBack={navigateToMain}
           />
         ) : (
           <CalendarScreen
             records={records}
-            onNavigateBack={() => setCurrentScreen('main')}
+            onNavigateBack={navigateToMain}
           />
         )}
       </SafeAreaView>

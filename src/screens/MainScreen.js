@@ -5,17 +5,29 @@ import {
     ScrollView,
     Platform,
 } from 'react-native';
-import { Card, Button, Title, Paragraph, Dialog, Portal, TextInput } from 'react-native-paper';
+import { Card, Button, Title, Paragraph, Dialog, Portal, TextInput, Menu, Divider } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function MainScreen({ onSaveRecord, onNavigateToHistory, onNavigateToCalendar }) {
     const [dialogVisible, setDialogVisible] = useState(false);
     const [currentType, setCurrentType] = useState(null);
     const [customDateTime, setCustomDateTime] = useState('');
+    const [feedingAmount, setFeedingAmount] = useState(null);
+    const [amountMenuVisible, setAmountMenuVisible] = useState(false);
+    const [diaperType, setDiaperType] = useState(null);
+    const [diaperMenuVisible, setDiaperMenuVisible] = useState(false);
 
     const handleRecordClick = (type) => {
         setCurrentType(type);
         setDialogVisible(true);
+        // 如果是feeding类型，重置奶量选择
+        if (type === 'feeding') {
+            setFeedingAmount(null);
+        }
+        // 如果是diaper类型，重置尿布类型选择
+        if (type === 'diaper') {
+            setDiaperType(null);
+        }
         // 为Web平台设置默认值
         if (Platform.OS === 'web') {
             setCustomDateTime(getDefaultDateTime());
@@ -25,27 +37,61 @@ export default function MainScreen({ onSaveRecord, onNavigateToHistory, onNaviga
     };
 
     const handleQuickRecord = () => {
-        onSaveRecord(currentType);
+        // 如果是feeding类型，必须选择奶量
+        if (currentType === 'feeding' && !feedingAmount) {
+            return;
+        }
+
+        const recordData = {};
+        // 如果是feeding类型，添加奶量信息
+        if (currentType === 'feeding') {
+            recordData.amount = feedingAmount;
+        }
+        // 如果是diaper类型且有选择类型，添加尿布类型信息
+        if (currentType === 'diaper' && diaperType) {
+            recordData.diaperType = diaperType;
+        }
+        onSaveRecord(currentType, recordData);
         setDialogVisible(false);
         setCurrentType(null);
+        setFeedingAmount(null);
+        setDiaperType(null);
     };
 
     const handleCustomRecord = () => {
         if (!customDateTime) {
             return;
         }
+        // 如果是feeding类型，必须选择奶量
+        if (currentType === 'feeding' && !feedingAmount) {
+            return;
+        }
+
         // 将日期时间字符串转换为ISO格式
         const timestamp = new Date(customDateTime).toISOString();
-        onSaveRecord(currentType, { timestamp });
+        const recordData = { timestamp };
+        // 如果是feeding类型，添加奶量信息
+        if (currentType === 'feeding') {
+            recordData.amount = feedingAmount;
+        }
+        // 如果是diaper类型且有选择类型，添加尿布类型信息
+        if (currentType === 'diaper' && diaperType) {
+            recordData.diaperType = diaperType;
+        }
+        onSaveRecord(currentType, recordData);
         setDialogVisible(false);
         setCurrentType(null);
         setCustomDateTime('');
+        setFeedingAmount(null);
+        setDiaperType(null);
     };
 
     const handleCancel = () => {
         setDialogVisible(false);
         setCurrentType(null);
         setCustomDateTime('');
+        setFeedingAmount(null);
+        setDiaperType(null);
     };
 
     // 获取当前日期时间的默认值（用于Web的datetime-local输入）
@@ -152,48 +198,181 @@ export default function MainScreen({ onSaveRecord, onNavigateToHistory, onNaviga
                     <Dialog.Title>选择记录方式</Dialog.Title>
                     <Dialog.Content>
                         <View style={styles.dialogContent}>
-                            <Button
-                                mode="contained"
-                                onPress={handleQuickRecord}
-                                style={styles.quickRecordButton}
-                                labelStyle={styles.dialogButtonLabel}
-                                icon="clock-outline"
-                            >
-                                立即记录（当前时间）
-                            </Button>
+                            {/* 如果是feeding类型，先显示奶量选择 */}
+                            {currentType === 'feeding' && (
+                                <View style={styles.amountContainer}>
+                                    <Paragraph style={styles.amountLabel}>请先选择奶量：</Paragraph>
+                                    <Menu
+                                        visible={amountMenuVisible}
+                                        onDismiss={() => setAmountMenuVisible(false)}
+                                        anchor={
+                                            <Button
+                                                mode="outlined"
+                                                onPress={() => setAmountMenuVisible(true)}
+                                                style={styles.amountButton}
+                                                labelStyle={styles.amountButtonLabel}
+                                                icon="cup"
+                                            >
+                                                {feedingAmount ? `${feedingAmount} oz` : '选择奶量'}
+                                            </Button>
+                                        }
+                                    >
+                                        {[1, 2, 3, 4, 5, 6, 7, 8].map((oz) => (
+                                            <Menu.Item
+                                                key={oz}
+                                                onPress={() => {
+                                                    setFeedingAmount(oz);
+                                                    setAmountMenuVisible(false);
+                                                }}
+                                                title={`${oz} oz`}
+                                            />
+                                        ))}
+                                    </Menu>
+                                </View>
+                            )}
 
-                            <View style={styles.customRecordContainer}>
-                                <Paragraph style={styles.customRecordLabel}>或手动输入时间：</Paragraph>
-                                {Platform.OS === 'web' ? (
-                                    <View>
-                                        <input
-                                            type="datetime-local"
-                                            value={customDateTime || getDefaultDateTime()}
-                                            onChange={(e) => setCustomDateTime(e.target.value)}
-                                            style={styles.webDateTimeInput}
+                            {/* 如果是diaper类型，显示尿布类型选择 */}
+                            {currentType === 'diaper' && (
+                                <View style={styles.amountContainer}>
+                                    <Paragraph style={styles.amountLabel}>选择类型：</Paragraph>
+                                    <Menu
+                                        visible={diaperMenuVisible}
+                                        onDismiss={() => setDiaperMenuVisible(false)}
+                                        anchor={
+                                            <Button
+                                                mode="outlined"
+                                                onPress={() => setDiaperMenuVisible(true)}
+                                                style={styles.diaperTypeButton}
+                                                labelStyle={styles.diaperTypeButtonLabel}
+                                                icon="baby-face-outline"
+                                            >
+                                                {diaperType === 'pee' ? '尿尿' :
+                                                    diaperType === 'poop' ? '拉臭臭' :
+                                                        diaperType === 'both' ? '尿尿&拉臭臭' :
+                                                            '选择类型'}
+                                            </Button>
+                                        }
+                                    >
+                                        <Menu.Item
+                                            onPress={() => {
+                                                setDiaperType('pee');
+                                                setDiaperMenuVisible(false);
+                                            }}
+                                            title="尿尿"
                                         />
+                                        <Menu.Item
+                                            onPress={() => {
+                                                setDiaperType('poop');
+                                                setDiaperMenuVisible(false);
+                                            }}
+                                            title="拉臭臭"
+                                        />
+                                        <Menu.Item
+                                            onPress={() => {
+                                                setDiaperType('both');
+                                                setDiaperMenuVisible(false);
+                                            }}
+                                            title="尿尿&拉臭臭"
+                                        />
+                                    </Menu>
+                                </View>
+                            )}
+
+                            {/* 对于feeding类型，只有在选择奶量后才显示记录选项 */}
+                            {currentType === 'feeding' && feedingAmount && (
+                                <View style={styles.recordOptionsContainer}>
+                                    <Button
+                                        mode="contained"
+                                        onPress={handleQuickRecord}
+                                        style={styles.quickRecordButton}
+                                        labelStyle={styles.dialogButtonLabel}
+                                        icon="clock-outline"
+                                    >
+                                        立即记录（当前时间）
+                                    </Button>
+
+                                    <View style={styles.customRecordContainer}>
+                                        <Paragraph style={styles.customRecordLabel}>或手动输入时间：</Paragraph>
+                                        {Platform.OS === 'web' ? (
+                                            <View>
+                                                <input
+                                                    type="datetime-local"
+                                                    value={customDateTime || getDefaultDateTime()}
+                                                    onChange={(e) => setCustomDateTime(e.target.value)}
+                                                    style={styles.webDateTimeInput}
+                                                />
+                                            </View>
+                                        ) : (
+                                            <TextInput
+                                                label="日期时间 (YYYY-MM-DD HH:MM)"
+                                                value={customDateTime}
+                                                onChangeText={setCustomDateTime}
+                                                placeholder="例如: 2024-01-15 14:30"
+                                                mode="outlined"
+                                                style={styles.dateTimeInput}
+                                            />
+                                        )}
+                                        <Button
+                                            mode="contained"
+                                            onPress={handleCustomRecord}
+                                            disabled={!customDateTime}
+                                            style={[styles.customRecordButton, !customDateTime && styles.disabledButton]}
+                                            labelStyle={styles.dialogButtonLabel}
+                                            icon="calendar-clock"
+                                        >
+                                            使用自定义时间记录
+                                        </Button>
                                     </View>
-                                ) : (
-                                    <TextInput
-                                        label="日期时间 (YYYY-MM-DD HH:MM)"
-                                        value={customDateTime}
-                                        onChangeText={setCustomDateTime}
-                                        placeholder="例如: 2024-01-15 14:30"
-                                        mode="outlined"
-                                        style={styles.dateTimeInput}
-                                    />
-                                )}
-                                <Button
-                                    mode="contained"
-                                    onPress={handleCustomRecord}
-                                    disabled={!customDateTime}
-                                    style={[styles.customRecordButton, !customDateTime && styles.disabledButton]}
-                                    labelStyle={styles.dialogButtonLabel}
-                                    icon="calendar-clock"
-                                >
-                                    使用自定义时间记录
-                                </Button>
-                            </View>
+                                </View>
+                            )}
+
+                            {/* 对于非feeding类型，显示原有的记录选项 */}
+                            {currentType !== 'feeding' && (
+                                <>
+                                    <Button
+                                        mode="contained"
+                                        onPress={handleQuickRecord}
+                                        style={styles.quickRecordButton}
+                                        labelStyle={styles.dialogButtonLabel}
+                                        icon="clock-outline"
+                                    >
+                                        立即记录（当前时间）
+                                    </Button>
+
+                                    <View style={styles.customRecordContainer}>
+                                        <Paragraph style={styles.customRecordLabel}>或手动输入时间：</Paragraph>
+                                        {Platform.OS === 'web' ? (
+                                            <View>
+                                                <input
+                                                    type="datetime-local"
+                                                    value={customDateTime || getDefaultDateTime()}
+                                                    onChange={(e) => setCustomDateTime(e.target.value)}
+                                                    style={styles.webDateTimeInput}
+                                                />
+                                            </View>
+                                        ) : (
+                                            <TextInput
+                                                label="日期时间 (YYYY-MM-DD HH:MM)"
+                                                value={customDateTime}
+                                                onChangeText={setCustomDateTime}
+                                                placeholder="例如: 2024-01-15 14:30"
+                                                mode="outlined"
+                                                style={styles.dateTimeInput}
+                                            />
+                                        )}
+                                        <Button
+                                            mode="contained"
+                                            onPress={handleCustomRecord}
+                                            disabled={!customDateTime}
+                                            style={[styles.customRecordButton, !customDateTime && styles.disabledButton]}
+                                            labelStyle={styles.dialogButtonLabel}
+                                            icon="calendar-clock"
+                                        >
+                                            使用自定义时间记录
+                                        </Button>
+                                    </View>
+                                </>
+                            )}
                         </View>
                     </Dialog.Content>
                     <Dialog.Actions>
@@ -291,6 +470,38 @@ const styles = StyleSheet.create({
     },
     dialogContent: {
         paddingVertical: 8,
+    },
+    amountContainer: {
+        marginBottom: 20,
+    },
+    amountLabel: {
+        marginBottom: 8,
+        fontSize: 14,
+        color: '#7F8C8D',
+        fontWeight: '500',
+    },
+    recordOptionsContainer: {
+        marginTop: 8,
+    },
+    amountButton: {
+        borderColor: '#FF6B9D',
+        borderWidth: 2,
+        borderRadius: 8,
+    },
+    amountButtonLabel: {
+        fontSize: 16,
+        color: '#FF6B9D',
+        fontWeight: '600',
+    },
+    diaperTypeButton: {
+        borderColor: '#FFE66D',
+        borderWidth: 2,
+        borderRadius: 8,
+    },
+    diaperTypeButtonLabel: {
+        fontSize: 16,
+        color: '#FFE66D',
+        fontWeight: '600',
     },
     quickRecordButton: {
         marginBottom: 24,

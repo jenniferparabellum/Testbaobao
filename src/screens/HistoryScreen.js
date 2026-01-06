@@ -106,14 +106,26 @@ export default function HistoryScreen({ records, onDeleteRecord, onNavigateBack 
         <Card.Content style={styles.recordContent}>
           <View style={styles.recordLeft}>
             <View style={[styles.iconCircle, { backgroundColor: color + '20' }]}>
-              <MaterialCommunityIcons 
-                name={getTypeIcon(item.type)} 
-                size={24} 
-                color={color} 
+              <MaterialCommunityIcons
+                name={getTypeIcon(item.type)}
+                size={24}
+                color={color}
               />
             </View>
             <View style={styles.recordInfo}>
-              <Title style={styles.recordType}>{getTypeLabel(item.type)}</Title>
+              <View style={styles.recordTypeContainer}>
+                <Title style={styles.recordType}>{getTypeLabel(item.type)}</Title>
+                {item.type === 'feeding' && item.amount && (
+                  <Paragraph style={styles.amountText}>{item.amount} oz</Paragraph>
+                )}
+                {item.type === 'diaper' && item.diaperType && (
+                  <Paragraph style={styles.diaperTypeText}>
+                    {item.diaperType === 'pee' ? '尿尿' :
+                      item.diaperType === 'poop' ? '拉臭臭' :
+                        item.diaperType === 'both' ? '尿尿&拉臭臭' : ''}
+                  </Paragraph>
+                )}
+              </View>
               <Paragraph style={styles.recordTime}>{formatFullDate(item.timestamp)}</Paragraph>
             </View>
           </View>
@@ -143,12 +155,12 @@ export default function HistoryScreen({ records, onDeleteRecord, onNavigateBack 
       // 尝试直接解析
       dateObj = new Date(date);
     }
-    
+
     return (
       <View style={styles.section}>
         {/* 24小时时间轴可视化 */}
         <DayTimeline records={records} date={dateObj} />
-        
+
         <View style={styles.sectionHeader}>
           <Title style={styles.sectionTitle}>{date}</Title>
           <Paragraph style={styles.sectionCount}>{dayRecords.length} 条记录</Paragraph>
@@ -266,11 +278,34 @@ const styles = StyleSheet.create({
   recordInfo: {
     flex: 1,
   },
+  recordTypeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
   recordType: {
     fontSize: 16,
     fontWeight: '600',
     color: '#2C3E50',
-    marginBottom: 4,
+    marginRight: 8,
+  },
+  amountText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FF6B9D',
+    backgroundColor: '#FF6B9D20',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  diaperTypeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFE66D',
+    backgroundColor: '#FFE66D30',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
   },
   recordTime: {
     fontSize: 14,
