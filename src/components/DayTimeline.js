@@ -91,16 +91,33 @@ export default function DayTimeline({ records, date }) {
       });
 
     // 调试信息
-    if (__DEV__ && filtered.length > 0) {
-      console.log('DayTimeline filtered records:', {
-        targetDate: `${targetYear}-${targetMonth + 1}-${targetDay}`,
+    if (__DEV__) {
+      console.log('DayTimeline filtering:', {
+        targetDate: `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(targetDay).padStart(2, '0')}`,
+        targetDateObj: targetDate.toLocaleDateString('zh-CN'),
         totalRecords: records.length,
         filteredCount: filtered.length,
         firstRecord: filtered[0] ? {
           timestamp: filtered[0].timestamp,
-          date: new Date(filtered[0].timestamp).toLocaleString(),
+          date: new Date(filtered[0].timestamp).toLocaleDateString('zh-CN'),
+          hours: new Date(filtered[0].timestamp).getHours(),
+          minutes: new Date(filtered[0].timestamp).getMinutes(),
         } : null,
       });
+
+      // 如果筛选结果为空，显示一些示例记录的时间戳
+      if (filtered.length === 0 && records.length > 0) {
+        console.warn('DayTimeline: No records matched for date:', {
+          targetDate: `${targetYear}-${String(targetMonth + 1).padStart(2, '0')}-${String(targetDay).padStart(2, '0')}`,
+          sampleRecords: records.slice(0, 3).map(r => ({
+            timestamp: r.timestamp,
+            date: new Date(r.timestamp).toLocaleDateString('zh-CN'),
+            year: new Date(r.timestamp).getFullYear(),
+            month: new Date(r.timestamp).getMonth(),
+            day: new Date(r.timestamp).getDate(),
+          })),
+        });
+      }
     }
 
     return filtered;

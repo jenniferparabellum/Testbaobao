@@ -7,7 +7,6 @@ import {
 import { Card, Title, Paragraph, Button, Divider, Appbar } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import DayTimeline from '../components/DayTimeline';
-import AllRecordsTimeline from '../components/AllRecordsTimeline';
 
 const getTypeIcon = (type) => {
   switch (type) {
@@ -144,16 +143,51 @@ export default function HistoryScreen({ records, onDeleteRecord, onNavigateBack 
 
   const renderSection = ({ item: date }) => {
     const dayRecords = groupedRecords[date] || [];
+
     // 将日期字符串转换为Date对象
-    // date格式是 "YYYY/M/D" 或类似格式，需要正确解析
-    const dateParts = date.split('/');
+    // date格式可能是 "YYYY/M/D" 或 "YYYY/MM/DD"，需要正确解析
     let dateObj;
-    if (dateParts.length === 3) {
-      // 格式: YYYY/M/D
-      dateObj = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
-    } else {
-      // 尝试直接解析
-      dateObj = new Date(date);
+    try {
+      const dateParts = date.split('/');
+      if (dateParts.length === 3) {
+        // 格式: YYYY/M/D 或 YYYY/MM/DD
+        const year = parseInt(dateParts[0], 10);
+        const month = parseInt(dateParts[1], 10) - 1; // 月份从0开始
+        const day = parseInt(dateParts[2], 10);
+        dateObj = new Date(year, month, day);
+
+        // 验证日期是否有效
+        if (isNaN(dateObj.getTime())) {
+          console.warn('Invalid date parsed:', date, 'parts:', dateParts);
+          // 如果解析失败，尝试使用第一条记录的时间戳来创建日期
+          if (dayRecords.length > 0) {
+            const firstRecord = dayRecords[0];
+            const recordDate = new Date(firstRecord.timestamp);
+            dateObj = new Date(recordDate.getFullYear(), recordDate.getMonth(), recordDate.getDate());
+          } else {
+            dateObj = new Date(date); // 最后尝试直接解析
+          }
+        }
+      } else {
+        // 尝试直接解析
+        dateObj = new Date(date);
+        if (isNaN(dateObj.getTime()) && dayRecords.length > 0) {
+          // 如果解析失败，使用第一条记录的时间戳
+          const firstRecord = dayRecords[0];
+          const recordDate = new Date(firstRecord.timestamp);
+          dateObj = new Date(recordDate.getFullYear(), recordDate.getMonth(), recordDate.getDate());
+        }
+      }
+    } catch (error) {
+      console.error('Error parsing date:', error, date);
+      // 如果解析出错，使用第一条记录的时间戳
+      if (dayRecords.length > 0) {
+        const firstRecord = dayRecords[0];
+        const recordDate = new Date(firstRecord.timestamp);
+        dateObj = new Date(recordDate.getFullYear(), recordDate.getMonth(), recordDate.getDate());
+      } else {
+        dateObj = new Date(); // 最后使用当前日期
+      }
     }
 
     return (
@@ -191,8 +225,29 @@ export default function HistoryScreen({ records, onDeleteRecord, onNavigateBack 
   }
 
   const dates = Object.keys(groupedRecords).sort((a, b) => {
-    return new Date(b) - new Date(a);
+    // 解析日期字符串进行比较
+    const parseDate = (dateStr) => {
+      const parts = dateStr.split('/');
+      if (parts.length === 3) {
+        return new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+      }
+      return new Date(dateStr);
+    };
+
+    const dateA = parseDate(a);
+    const dateB = parseDate(b);
+    return dateB.getTime() - dateA.getTime(); // 降序排列（最新的在前）
   });
+
+  // 调试信息
+  if (__DEV__) {
+    console.log('HistoryScreen dates:', dates);
+    console.log('HistoryScreen groupedRecords keys:', Object.keys(groupedRecords));
+    dates.forEach(date => {
+      const dayRecords = groupedRecords[date] || [];
+      console.log(`Date ${date}: ${dayRecords.length} records`);
+    });
+  }
 
   return (
     <View style={styles.container}>
@@ -206,11 +261,6 @@ export default function HistoryScreen({ records, onDeleteRecord, onNavigateBack 
         keyExtractor={(item) => item}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
-        ListHeaderComponent={
-          <View style={styles.allTimelineContainer}>
-            <AllRecordsTimeline records={records} />
-          </View>
-        }
       />
     </View>
   );
@@ -227,9 +277,6 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: 16,
-  },
-  allTimelineContainer: {
-    marginBottom: 16,
   },
   section: {
     marginBottom: 24,
