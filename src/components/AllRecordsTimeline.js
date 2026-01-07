@@ -46,16 +46,26 @@ export default function AllRecordsTimeline({ records }) {
   // 计算时间范围（最早和最晚的记录）
   const earliestTime = new Date(sortedRecords[0].timestamp);
   const latestTime = new Date(sortedRecords[sortedRecords.length - 1].timestamp);
-  
+
   // 计算总时间跨度（毫秒）
   const totalTimeSpan = latestTime - earliestTime;
-  
+
   // 如果所有记录在同一天，使用24小时时间轴
   const isSameDay = earliestTime.toDateString() === latestTime.toDateString();
-  
+
   // 计算每个记录在时间轴上的位置（百分比）
   const getPosition = (timestamp) => {
     const recordTime = new Date(timestamp);
+
+    // 如果所有记录在同一天，使用24小时制计算位置
+    if (isSameDay) {
+      const hours = recordTime.getHours();
+      const minutes = recordTime.getMinutes();
+      const totalMinutes = hours * 60 + minutes;
+      return (totalMinutes / (24 * 60)) * 100; // 24小时 = 1440分钟
+    }
+
+    // 跨天的情况，使用时间跨度计算
     if (totalTimeSpan === 0) return 0; // 避免除以零
     const timeFromStart = recordTime - earliestTime;
     return (timeFromStart / totalTimeSpan) * 100;
@@ -64,28 +74,28 @@ export default function AllRecordsTimeline({ records }) {
   // 生成日期标记（如果跨天）
   const dateMarkers = useMemo(() => {
     if (isSameDay) return [];
-    
+
     const markers = [];
     const seenDates = new Set();
-    
+
     sortedRecords.forEach(record => {
       const date = new Date(record.timestamp);
       const dateKey = date.toLocaleDateString('zh-CN');
-      
+
       if (!seenDates.has(dateKey)) {
         seenDates.add(dateKey);
         // 计算位置
         const recordTime = new Date(record.timestamp);
         const timeFromStart = recordTime - earliestTime;
         const position = totalTimeSpan === 0 ? 0 : (timeFromStart / totalTimeSpan) * 100;
-        
+
         markers.push({
           date: dateKey,
           position: position,
         });
       }
     });
-    
+
     return markers;
   }, [sortedRecords, isSameDay, earliestTime, latestTime, totalTimeSpan]);
 
@@ -135,7 +145,7 @@ export default function AllRecordsTimeline({ records }) {
           {sortedRecords.map((record) => {
             const color = getTypeColor(record.type);
             const position = getPosition(record.timestamp);
-            
+
             return (
               <View key={record.id} style={styles.recordContainer}>
                 {/* 时间点标记 */}
@@ -151,8 +161,8 @@ export default function AllRecordsTimeline({ records }) {
                       record.type === 'feeding'
                         ? 'baby-bottle'
                         : record.type === 'sleeping'
-                        ? 'sleep'
-                        : 'baby-face-outline'
+                          ? 'sleep'
+                          : 'baby-face-outline'
                     }
                     size={12}
                     color="#FFFFFF"
@@ -177,7 +187,7 @@ export default function AllRecordsTimeline({ records }) {
           })}
         </View>
 
-        {/* 标记标签 */}
+        {/* 标记标签 - 显示24小时制时间 */}
         <View style={styles.markerLabels}>
           {markers.map((marker, index) => (
             <View
@@ -199,12 +209,12 @@ export default function AllRecordsTimeline({ records }) {
         {/* 活动时间段 */}
         {sortedRecords.map((record, index) => {
           if (index === sortedRecords.length - 1) return null;
-          
+
           const currentPosition = getPosition(record.timestamp);
           const nextRecord = sortedRecords[index + 1];
           const nextPosition = getPosition(nextRecord.timestamp);
           const color = getTypeColor(record.type);
-          
+
           // 如果下一条记录是相同类型，显示连接线
           if (record.type === nextRecord.type) {
             return (
@@ -294,13 +304,13 @@ const styles = StyleSheet.create({
   },
   timePoint: {
     position: 'absolute',
-    top: 15,
+    top: 13, // 调整位置使图标中心对齐时间轴中心 (50/2 - 24/2 = 13)
     width: 24,
     height: 24,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    transform: [{ translateX: -12 }],
+    transform: [{ translateX: -12 }], // 图标宽度24px，向左偏移12px使中心对齐
     elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },

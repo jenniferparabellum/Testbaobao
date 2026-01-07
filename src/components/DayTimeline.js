@@ -40,14 +40,70 @@ export default function DayTimeline({ records, date }) {
   // 筛选该日期的记录并按时间排序
   const dayRecords = useMemo(() => {
     if (!records || records.length === 0) return [];
-    
-    const dateStr = date.toLocaleDateString('zh-CN');
-    return records
+    if (!date) return [];
+
+    // 确保date是有效的Date对象
+    const targetDate = date instanceof Date ? date : new Date(date);
+    if (isNaN(targetDate.getTime())) {
+      console.warn('Invalid date passed to DayTimeline:', date);
+      return [];
+    }
+
+    // 获取目标日期的年月日（使用UTC避免时区问题）
+    const targetYear = targetDate.getFullYear();
+    const targetMonth = targetDate.getMonth();
+    const targetDay = targetDate.getDate();
+
+    const filtered = records
       .filter(record => {
-        const recordDate = new Date(record.timestamp);
-        return recordDate.toLocaleDateString('zh-CN') === dateStr;
+        try {
+          if (!record || !record.timestamp) {
+            return false;
+          }
+
+          const recordDate = new Date(record.timestamp);
+          if (isNaN(recordDate.getTime())) {
+            console.warn('Invalid record timestamp:', record.timestamp);
+            return false;
+          }
+
+          // 比较年月日，忽略时分秒
+          const match = (
+            recordDate.getFullYear() === targetYear &&
+            recordDate.getMonth() === targetMonth &&
+            recordDate.getDate() === targetDay
+          );
+
+          return match;
+        } catch (error) {
+          console.error('Error filtering record:', error, record);
+          return false;
+        }
       })
-      .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+      .sort((a, b) => {
+        try {
+          const timeA = new Date(a.timestamp).getTime();
+          const timeB = new Date(b.timestamp).getTime();
+          return timeA - timeB;
+        } catch (error) {
+          return 0;
+        }
+      });
+
+    // 调试信息
+    if (__DEV__ && filtered.length > 0) {
+      console.log('DayTimeline filtered records:', {
+        targetDate: `${targetYear}-${targetMonth + 1}-${targetDay}`,
+        totalRecords: records.length,
+        filteredCount: filtered.length,
+        firstRecord: filtered[0] ? {
+          timestamp: filtered[0].timestamp,
+          date: new Date(filtered[0].timestamp).toLocaleString(),
+        } : null,
+      });
+    }
+
+    return filtered;
   }, [records, date]);
 
   if (dayRecords.length === 0) {
@@ -56,11 +112,37 @@ export default function DayTimeline({ records, date }) {
 
   // 计算每个记录在24小时时间轴上的位置（百分比）
   const getPosition = (timestamp) => {
-    const date = new Date(timestamp);
-    const hours = date.getHours();
-    const minutes = date.getMinutes();
-    const totalMinutes = hours * 60 + minutes;
-    return (totalMinutes / (24 * 60)) * 100; // 24小时 = 1440分钟
+    try {
+      // 确保时间戳是字符串或数字
+      if (!timestamp) {
+        console.warn('Missing timestamp');
+        return 0;
+      }
+
+      const recordDate = new Date(timestamp);
+
+      // 确保日期有效
+      if (isNaN(recordDate.getTime())) {
+        console.warn('Invalid timestamp:', timestamp, 'Parsed as:', recordDate);
+        return 0;
+      }
+
+      const hours = recordDate.getHours();
+      const minutes = recordDate.getMinutes();
+      const seconds = recordDate.getSeconds();
+
+      // 计算总分钟数（包括秒的小数部分，更精确）
+      const totalMinutes = hours * 60 + minutes + seconds / 60;
+      const position = (totalMinutes / (24 * 60)) * 100; // 24小时 = 1440分钟
+
+      // 确保位置在有效范围内
+      const finalPosition = Math.max(0, Math.min(100, position));
+
+      return finalPosition;
+    } catch (error) {
+      console.error('Error calculating position:', error, 'Timestamp:', timestamp);
+      return 0;
+    }
   };
 
   // 生成小时标记（0-23点）
@@ -92,7 +174,7 @@ export default function DayTimeline({ records, date }) {
               ]}
             />
           ))}
-          
+
           {/* 小时标签（横轴时间显示） */}
           <View style={styles.hourLabels}>
             {hourMarkers.map((hour) => (
@@ -114,7 +196,20 @@ export default function DayTimeline({ records, date }) {
           {dayRecords.map((record, index) => {
             const color = getTypeColor(record.type);
             const position = getPosition(record.timestamp);
-            
+
+            // 调试信息（开发时使用）
+            if (__DEV__ && index === 0) {
+              const testDate = new Date(record.timestamp);
+              console.log('DayTimeline Debug:', {
+                timestamp: record.timestamp,
+                parsedDate: testDate,
+                hours: testDate.getHours(),
+                minutes: testDate.getMinutes(),
+                position: position,
+                totalRecords: dayRecords.length
+              });
+            }
+
             return (
               <View key={record.id} style={styles.recordContainer}>
                 {/* 时间点标记 */}
@@ -130,8 +225,8 @@ export default function DayTimeline({ records, date }) {
                       record.type === 'feeding'
                         ? 'baby-bottle'
                         : record.type === 'sleeping'
-                        ? 'sleep'
-                        : 'baby-face-outline'
+                          ? 'sleep'
+                          : 'baby-face-outline'
                     }
                     size={12}
                     color="#FFFFFF"
@@ -157,16 +252,16 @@ export default function DayTimeline({ records, date }) {
         {dayRecords.map((record, index) => {
           const currentPosition = getPosition(record.timestamp);
           const color = getTypeColor(record.type);
-          
+
           // 计算活动持续时间
           // 如果下一条记录存在且是相同类型，显示到下一个活动的时间段
           // 否则显示一个默认时间段（比如30分钟）
           let segmentWidth = 2; // 默认2%宽度（约30分钟）
-          
+
           if (index < dayRecords.length - 1) {
             const nextRecord = dayRecords[index + 1];
             const nextPosition = getPosition(nextRecord.timestamp);
-            
+
             if (record.type === nextRecord.type) {
               // 如果下一条是相同类型，连接到下一条
               segmentWidth = nextPosition - currentPosition;
@@ -175,7 +270,7 @@ export default function DayTimeline({ records, date }) {
               segmentWidth = Math.min((nextPosition - currentPosition) / 2, 5);
             }
           }
-          
+
           return (
             <View
               key={`segment-${record.id}`}
@@ -284,13 +379,13 @@ const styles = StyleSheet.create({
   },
   timePoint: {
     position: 'absolute',
-    top: 10,
+    top: 8, // 调整位置使图标中心对齐时间轴中心 (40/2 - 24/2 = 8)
     width: 24,
     height: 24,
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
-    transform: [{ translateX: -12 }],
+    transform: [{ translateX: -12 }], // 图标宽度24px，向左偏移12px使中心对齐
     elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
