@@ -175,13 +175,33 @@ export default function TimelineView({ records, selectedDate }) {
                   <View style={[styles.recordIcon, { backgroundColor: color + '20' }]}>
                     <MaterialCommunityIcons
                       name={getTypeIcon(record.type)}
-                      size={20}
+                      size={24}
                       color={color}
                     />
                   </View>
                   <View style={styles.recordInfo}>
-                    <Text style={styles.recordType}>{getTypeLabel(record.type)}</Text>
-                    <Text style={styles.recordTime}>{formatTime(record.timestamp)}</Text>
+                    <View style={styles.recordTypeContainer}>
+                      <Text style={styles.recordType}>{getTypeLabel(record.type)}</Text>
+                      {record.type === 'feeding' && record.amount && (
+                        <Text style={styles.amountText}>{record.amount} oz</Text>
+                      )}
+                      {record.type === 'diaper' && record.diaperType && (
+                        <Text style={styles.diaperTypeText}>
+                          {record.diaperType === 'pee' ? '尿尿' :
+                            record.diaperType === 'poop' ? '拉臭臭' :
+                              record.diaperType === 'both' ? '尿尿&拉臭臭' : ''}
+                        </Text>
+                      )}
+                    </View>
+                    <Text style={styles.recordTime}>
+                      {new Date(record.timestamp).toLocaleString('zh-CN', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </Text>
                   </View>
                 </View>
               );
@@ -263,13 +283,17 @@ const styles = StyleSheet.create({
   recordItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
-    paddingLeft: 8,
+    marginBottom: 12,
+    padding: 12,
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
   },
   recordIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -277,11 +301,34 @@ const styles = StyleSheet.create({
   recordInfo: {
     flex: 1,
   },
+  recordTypeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
   recordType: {
     fontSize: 16,
     fontWeight: '600',
     color: '#2C3E50',
-    marginBottom: 4,
+    marginRight: 8,
+  },
+  amountText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FF6B9D',
+    backgroundColor: '#FF6B9D20',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
+  },
+  diaperTypeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFE66D',
+    backgroundColor: '#FFE66D30',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 12,
   },
   recordTime: {
     fontSize: 14,
