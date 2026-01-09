@@ -192,9 +192,6 @@ export default function HistoryScreen({ records, onDeleteRecord, onNavigateBack 
 
     return (
       <View style={styles.section}>
-        {/* 24小时时间轴可视化 */}
-        <DayTimeline records={records} date={dateObj} />
-
         <View style={styles.sectionHeader}>
           <Title style={styles.sectionTitle}>{date}</Title>
           <Paragraph style={styles.sectionCount}>{dayRecords.length} 条记录</Paragraph>
@@ -204,6 +201,42 @@ export default function HistoryScreen({ records, onDeleteRecord, onNavigateBack 
             {renderRecord({ item: record })}
           </View>
         ))}
+      </View>
+    );
+  };
+
+  // 渲染时间轴部分
+  const renderTimelines = () => {
+    return (
+      <View style={styles.timelinesContainer}>
+        {dates.map((date) => {
+          const dayRecords = groupedRecords[date] || [];
+          if (dayRecords.length === 0) return null;
+
+          // 解析日期
+          const dateParts = date.split('/');
+          let dateObj;
+          if (dateParts.length === 3) {
+            const year = parseInt(dateParts[0], 10);
+            const month = parseInt(dateParts[1], 10) - 1;
+            const day = parseInt(dateParts[2], 10);
+            dateObj = new Date(year, month, day);
+          } else {
+            dateObj = new Date(date);
+          }
+
+          if (isNaN(dateObj.getTime()) && dayRecords.length > 0) {
+            const firstRecord = dayRecords[0];
+            const recordDate = new Date(firstRecord.timestamp);
+            dateObj = new Date(recordDate.getFullYear(), recordDate.getMonth(), recordDate.getDate());
+          }
+
+          return (
+            <View key={`timeline-${date}`} style={styles.timelineItem}>
+              <DayTimeline records={records} date={dateObj} />
+            </View>
+          );
+        })}
       </View>
     );
   };
@@ -261,6 +294,7 @@ export default function HistoryScreen({ records, onDeleteRecord, onNavigateBack 
         keyExtractor={(item) => item}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        ListHeaderComponent={renderTimelines()}
       />
     </View>
   );
@@ -277,6 +311,16 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: 16,
+  },
+  timelinesContainer: {
+    padding: 16,
+    paddingBottom: 24,
+    backgroundColor: '#F8F9FA',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E0E0E0',
+  },
+  timelineItem: {
+    marginBottom: 16,
   },
   section: {
     marginBottom: 24,

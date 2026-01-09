@@ -144,6 +144,7 @@ export default function DayTimeline({ records, date }) {
         return 0;
       }
 
+      // 基于24小时计算位置
       const hours = recordDate.getHours();
       const minutes = recordDate.getMinutes();
       const seconds = recordDate.getSeconds();
@@ -163,6 +164,7 @@ export default function DayTimeline({ records, date }) {
   };
 
   // 生成小时标记（0-23点）
+  // 如果date为null，仍然显示24小时标记（基于第一条记录所在日期）
   const hourMarkers = Array.from({ length: 24 }, (_, i) => i);
 
   return (
