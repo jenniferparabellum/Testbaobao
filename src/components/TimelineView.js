@@ -49,6 +49,17 @@ const formatTime = (timestamp) => {
   return `${hours}:${minutes}`;
 };
 
+const formatFullDateTime = (timestamp) => {
+  const date = new Date(timestamp);
+  return date.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
 export default function TimelineView({ records, selectedDate }) {
   // 筛选选中日期的记录
   const dayRecords = useMemo(() => {
@@ -175,7 +186,7 @@ export default function TimelineView({ records, selectedDate }) {
                   <View style={[styles.recordIcon, { backgroundColor: color + '20' }]}>
                     <MaterialCommunityIcons
                       name={getTypeIcon(record.type)}
-                      size={24}
+                      size={20}
                       color={color}
                     />
                   </View>
@@ -188,20 +199,12 @@ export default function TimelineView({ records, selectedDate }) {
                       {record.type === 'diaper' && record.diaperType && (
                         <Text style={styles.diaperTypeText}>
                           {record.diaperType === 'pee' ? '尿尿' :
-                            record.diaperType === 'poop' ? '拉臭臭' :
-                              record.diaperType === 'both' ? '尿尿&拉臭臭' : ''}
+                           record.diaperType === 'poop' ? '拉臭臭' :
+                           record.diaperType === 'both' ? '尿尿&拉臭臭' : ''}
                         </Text>
                       )}
                     </View>
-                    <Text style={styles.recordTime}>
-                      {new Date(record.timestamp).toLocaleString('zh-CN', {
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </Text>
+                    <Text style={styles.recordTime}>{formatFullDateTime(record.timestamp)}</Text>
                   </View>
                 </View>
               );
@@ -283,17 +286,13 @@ const styles = StyleSheet.create({
   recordItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
-    padding: 12,
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+    marginBottom: 16,
+    paddingLeft: 8,
   },
   recordIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
