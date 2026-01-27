@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Platform } from 'react-native';
 import { Text } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
@@ -166,6 +166,10 @@ export default function DayTimeline({ records, date }) {
   // 生成小时标记（0-23点）
   // 如果date为null，仍然显示24小时标记（基于第一条记录所在日期）
   const hourMarkers = Array.from({ length: 24 }, (_, i) => i);
+  const labelStep = Platform.OS === 'web' ? 1 : 3;
+  const visibleHourLabels = hourMarkers.filter(
+    (hour) => hour === 0 || hour === 23 || hour % labelStep === 0
+  );
 
   return (
     <View style={styles.container}>
@@ -196,7 +200,7 @@ export default function DayTimeline({ records, date }) {
 
           {/* 小时标签（横轴时间显示） */}
           <View style={styles.hourLabels}>
-            {hourMarkers.map((hour) => (
+            {visibleHourLabels.map((hour) => (
               <View
                 key={`label-${hour}`}
                 style={[
@@ -206,7 +210,14 @@ export default function DayTimeline({ records, date }) {
                   hour === 23 && styles.hourLabelRight,
                 ]}
               >
-                <Text style={styles.hourLabelText}>{hour}:00</Text>
+                <Text
+                  style={[
+                    styles.hourLabelText,
+                    Platform.OS !== 'web' && styles.hourLabelTextCompact,
+                  ]}
+                >
+                  {hour}:00
+                </Text>
               </View>
             ))}
           </View>
@@ -379,7 +390,7 @@ const styles = StyleSheet.create({
   hourLabel: {
     position: 'absolute',
     transform: [{ translateX: -15 }],
-    minWidth: 30,
+    minWidth: 28,
   },
   hourLabelLeft: {
     transform: [{ translateX: 0 }],
@@ -391,6 +402,9 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: '#95A5A6',
     fontWeight: '500',
+  },
+  hourLabelTextCompact: {
+    fontSize: 7.5,
   },
   recordContainer: {
     position: 'absolute',
