@@ -8,7 +8,13 @@ import {
 import { Card, Button, Title, Paragraph, Dialog, Portal, TextInput, Menu, Divider } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-export default function MainScreen({ onSaveRecord, onNavigateToHistory, onNavigateToCalendar }) {
+export default function MainScreen({
+    onSaveRecord,
+    onNavigateToHistory,
+    onNavigateToCalendar,
+    onExportRecords,
+    onImportRecords,
+}) {
     const [dialogVisible, setDialogVisible] = useState(false);
     const [currentType, setCurrentType] = useState(null);
     const [customDateTime, setCustomDateTime] = useState('');
@@ -198,6 +204,27 @@ export default function MainScreen({ onSaveRecord, onNavigateToHistory, onNaviga
                     icon="calendar-month"
                 >
                     日历视图
+                </Button>
+            </View>
+
+            <View style={styles.backupContainer}>
+                <Button
+                    mode="contained"
+                    onPress={onExportRecords}
+                    style={styles.backupButton}
+                    labelStyle={styles.backupButtonLabel}
+                    icon="content-save"
+                >
+                    导出记录备份
+                </Button>
+                <Button
+                    mode="outlined"
+                    onPress={onImportRecords}
+                    style={[styles.backupButton, styles.backupOutlineButton]}
+                    labelStyle={[styles.backupButtonLabel, styles.backupOutlineLabel]}
+                    icon="backup-restore"
+                >
+                    从剪贴板恢复
                 </Button>
             </View>
 
@@ -520,6 +547,29 @@ const styles = StyleSheet.create({
         fontSize: 16,
         color: '#FF6B9D',
         fontWeight: '600',
+    },
+    backupContainer: {
+        marginTop: 16,
+        alignItems: 'center',
+    },
+    backupButton: {
+        borderRadius: 24,
+        paddingHorizontal: 28,
+        marginTop: 10,
+        backgroundColor: '#4ECDC4',
+    },
+    backupOutlineButton: {
+        borderColor: '#4ECDC4',
+        borderWidth: 2,
+        backgroundColor: '#FFFFFF',
+    },
+    backupOutlineLabel: {
+        color: '#4ECDC4',
+    },
+    backupButtonLabel: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#FFFFFF',
     },
     dialog: {
         borderRadius: 16,

@@ -8,6 +8,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Provider as PaperProvider, DefaultTheme } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Clipboard from 'expo-clipboard';
 import MainScreen from './src/screens/MainScreen';
 import HistoryScreen from './src/screens/HistoryScreen';
 import CalendarScreen from './src/screens/CalendarScreen';
@@ -85,6 +86,56 @@ export default function App() {
     }
   };
 
+  const mergeRecords = (existing = [], incoming = []) => {
+    const combined = [...incoming, ...existing];
+    const seen = new Set();
+    const unique = [];
+    combined.forEach(record => {
+      if (record && record.id && !seen.has(record.id)) {
+        seen.add(record.id);
+        unique.push(record);
+      }
+    });
+    unique.sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+    return unique;
+  };
+
+  const exportRecords = async () => {
+    try {
+      if (records.length === 0) {
+        Alert.alert('导出记录', '当前没有记录可以备份。');
+        return;
+      }
+      const payload = JSON.stringify(records, null, 2);
+      await Clipboard.setStringAsync(payload);
+      Alert.alert('导出完成', '记录已经复制到剪贴板，可粘贴保存到其他地方。');
+    } catch (error) {
+      console.error('导出记录失败:', error);
+      Alert.alert('导出失败', '无法拷贝记录，请重试。');
+    }
+  };
+
+  const importRecordsFromClipboard = async () => {
+    try {
+      const clipboard = await Clipboard.getStringAsync();
+      if (!clipboard) {
+        Alert.alert('恢复失败', '剪贴板为空，请先复制备份内容。');
+        return;
+      }
+      const parsed = JSON.parse(clipboard);
+      if (!Array.isArray(parsed)) {
+        throw new Error('无效的记录格式');
+      }
+      const merged = mergeRecords(records, parsed);
+      setRecords(merged);
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
+      Alert.alert('恢复成功', '记录已从剪贴板导入。');
+    } catch (error) {
+      console.error('恢复记录失败:', error);
+      Alert.alert('恢复失败', '剪贴板内容无法解析，请确认复制了正确的备份数据。');
+    }
+  };
+
   const saveRecord = async (type, data = {}) => {
     try {
       const newRecord = {
@@ -141,6 +192,8 @@ export default function App() {
             onSaveRecord={saveRecord}
             onNavigateToHistory={navigateToHistory}
             onNavigateToCalendar={navigateToCalendar}
+            onExportRecords={exportRecords}
+            onImportRecords={importRecordsFromClipboard}
           />
         ) : currentScreen === 'history' ? (
           <HistoryScreen
