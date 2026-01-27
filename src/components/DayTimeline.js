@@ -128,121 +128,85 @@ export default function DayTimeline({ records, date }) {
   }
 
   // 计算每个记录在24小时时间轴上的位置（百分比）
-  const getPosition = (timestamp) => {
-    try {
-      // 确保时间戳是字符串或数字
-      if (!timestamp) {
-        console.warn('Missing timestamp');
-        return 0;
-      }
+  const isMobile = Platform.OS !== 'web';
 
-      const recordDate = new Date(timestamp);
+  const createSectionRecords = (recordsList, startHour, endHour) => {
+    const rangeRecords = recordsList
+      .map((record) => ({
+        ...record,
+        __date: new Date(record.timestamp),
+      }))
+      .filter(({ __date }) => {
+        const hour = __date.getHours();
+        return hour >= startHour && hour <= endHour;
+      })
+      .sort((a, b) => a.__date - b.__date);
 
-      // 确保日期有效
-      if (isNaN(recordDate.getTime())) {
-        console.warn('Invalid timestamp:', timestamp, 'Parsed as:', recordDate);
-        return 0;
-      }
-
-      // 基于24小时计算位置
-      const hours = recordDate.getHours();
-      const minutes = recordDate.getMinutes();
-      const seconds = recordDate.getSeconds();
-
-      // 计算总分钟数（包括秒的小数部分，更精确）
-      const totalMinutes = hours * 60 + minutes + seconds / 60;
-      const position = (totalMinutes / (24 * 60)) * 100; // 24小时 = 1440分钟
-
-      // 确保位置在有效范围内
-      const finalPosition = Math.max(0, Math.min(100, position));
-
-      return finalPosition;
-    } catch (error) {
-      console.error('Error calculating position:', error, 'Timestamp:', timestamp);
-      return 0;
-    }
+    return rangeRecords;
   };
 
-  // 生成小时标记（0-23点）
-  // 如果date为null，仍然显示24小时标记（基于第一条记录所在日期）
-  const hourMarkers = Array.from({ length: 24 }, (_, i) => i);
-  const labelStep = Platform.OS === 'web' ? 1 : 3;
-  const visibleHourLabels = hourMarkers.filter(
-    (hour) => hour === 0 || hour === 23 || hour % labelStep === 0
-  );
+  const computePosition = (recordDate, startHour, totalMinutes) => {
+    const hours = recordDate.getHours();
+    const minutes = recordDate.getMinutes();
+    const seconds = recordDate.getSeconds();
+    const elapsedMinutes = (hours - startHour) * 60 + minutes + seconds / 60;
+    const ratio = elapsedMinutes / totalMinutes;
+    return Math.max(0, Math.min(100, ratio * 100));
+  };
 
-  return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.dateLabel}>
-          {date.toLocaleDateString('zh-CN', {
-            month: 'long',
-            day: 'numeric',
-            weekday: 'long',
-          })}
-        </Text>
-        <Text style={styles.recordCount}>{dayRecords.length} 条记录</Text>
-      </View>
+  const renderTimelineSection = ({
+    sectionRecords,
+    startHour,
+    endHour,
+    label,
+    isMobileSection = false,
+  }) => {
+    const totalMinutes = (endHour - startHour + 1) * 60;
+    const hourMarkers = Array.from({ length: endHour - startHour + 1 }, (_, i) => startHour + i);
+    const labelStep = isMobileSection ? 3 : 1;
+    const visibleHourLabels = hourMarkers.filter(
+      (hour) => hour === startHour || hour === endHour || hour % labelStep === 0
+    );
 
-      <View style={styles.timelineContainer}>
-        {/* 24小时时间轴背景 */}
-        <View style={styles.timelineBackground}>
-          {/* 小时标记线 */}
+    const containerStyle = isMobileSection ? styles.mobileTimelineContainer : styles.webTimelineContainer;
+    const hourLabelTextStyle = isMobileSection
+      ? [styles.hourLabelText, styles.hourLabelTextCompact]
+      : styles.hourLabelText;
+
+    return (
+      <View style={styles.timelineSectionWrapper}>
+        {label && <Text style={[styles.sectionLabel, isMobileSection && styles.sectionLabelMobile]}>{label}</Text>}
+        <View style={[styles.timelineSectionBackground, containerStyle]}>
           {hourMarkers.map((hour) => (
             <View
-              key={hour}
+              key={`marker-${label || 'full'}-${hour}`}
               style={[
                 styles.hourMarker,
-                { left: `${(hour / 24) * 100}%` },
+                { left: `${((hour - startHour) / (endHour - startHour)) * 100}%` },
               ]}
             />
           ))}
-
-          {/* 小时标签（横轴时间显示） */}
           <View style={styles.hourLabels}>
             {visibleHourLabels.map((hour) => (
               <View
-                key={`label-${hour}`}
+                key={`label-${label || 'full'}-${hour}`}
                 style={[
                   styles.hourLabel,
-                  { left: `${(hour / 24) * 100}%` },
-                  hour === 0 && styles.hourLabelLeft,
-                  hour === 23 && styles.hourLabelRight,
+                  { left: `${((hour - startHour) / (endHour - startHour)) * 100}%` },
+                  hour === startHour && styles.hourLabelLeft,
+                  hour === endHour && styles.hourLabelRight,
                 ]}
               >
-                <Text
-                  style={[
-                    styles.hourLabelText,
-                    Platform.OS !== 'web' && styles.hourLabelTextCompact,
-                  ]}
-                >
-                  {hour}:00
-                </Text>
+                <Text style={hourLabelTextStyle}>{`${hour}:00`}</Text>
               </View>
             ))}
           </View>
-
-          {/* 活动时间点 */}
-          {dayRecords.map((record, index) => {
+          {sectionRecords.map((record, index) => {
             const color = getTypeColor(record.type);
-            const position = getPosition(record.timestamp);
-
-            // 调试信息（开发时使用）
-            if (__DEV__ && index === 0) {
-              const testDate = new Date(record.timestamp);
-              console.log('DayTimeline Debug:', {
-                timestamp: record.timestamp,
-                parsedDate: testDate,
-                hours: testDate.getHours(),
-                minutes: testDate.getMinutes(),
-                position: position,
-                totalRecords: dayRecords.length
-              });
-            }
+            const position = computePosition(record.__date, startHour, totalMinutes);
 
             return (
-              <View key={record.id} style={styles.recordContainer}>
-                {/* 时间点标记 */}
+              <View key={`point-${record.id}-${label}`} style={styles.recordContainer}>
                 <View
                   style={[
                     styles.timePoint,
@@ -262,13 +226,11 @@ export default function DayTimeline({ records, date }) {
                     color="#FFFFFF"
                   />
                 </View>
-
-                {/* 时间标签 */}
                 <View
                   style={[
                     styles.timeLabel,
                     { left: `${position}%` },
-                    position > 90 && styles.timeLabelRight, // 如果太靠右，调整位置
+                    position > 90 && styles.timeLabelRight,
                   ]}
                 >
                   <Text style={styles.timeText}>{formatTime(record.timestamp)}</Text>
@@ -277,47 +239,88 @@ export default function DayTimeline({ records, date }) {
             );
           })}
         </View>
-
-        {/* 活动时间段（显示每个活动的时间段） */}
-        {dayRecords.map((record, index) => {
-          const currentPosition = getPosition(record.timestamp);
+        {sectionRecords.map((record, index) => {
+          const currentPosition = computePosition(record.__date, startHour, totalMinutes);
           const color = getTypeColor(record.type);
-
-          // 计算活动持续时间
-          // 如果下一条记录存在且是相同类型，显示到下一个活动的时间段
-          // 否则显示一个默认时间段（比如30分钟）
-          let segmentWidth = 2; // 默认2%宽度（约30分钟）
-
-          if (index < dayRecords.length - 1) {
-            const nextRecord = dayRecords[index + 1];
-            const nextPosition = getPosition(nextRecord.timestamp);
-
-            if (record.type === nextRecord.type) {
-              // 如果下一条是相同类型，连接到下一条
-              segmentWidth = nextPosition - currentPosition;
+          let segmentWidth = 2;
+          if (index < sectionRecords.length - 1) {
+            const nextPosition = computePosition(
+              sectionRecords[index + 1].__date,
+              startHour,
+              totalMinutes
+            );
+            if (record.type === sectionRecords[index + 1].type) {
+              segmentWidth = Math.max(2, nextPosition - currentPosition);
             } else {
-              // 如果下一条是不同类型，显示到中间点
               segmentWidth = Math.min((nextPosition - currentPosition) / 2, 5);
             }
           }
 
           return (
             <View
-              key={`segment-${record.id}`}
+              key={`segment-${record.id}-${label}`}
               style={[
                 styles.timeSegment,
                 {
                   left: `${currentPosition}%`,
                   width: `${segmentWidth}%`,
-                  backgroundColor: color + '60', // 60% 透明度，更明显
+                  backgroundColor: color + '60',
+                  top: isMobileSection ? 28 : 22,
                 },
               ]}
             />
           );
         })}
       </View>
+    );
+  };
 
-      {/* 图例 */}
+  const amRecords = createSectionRecords(dayRecords, 0, 11);
+  const pmRecords = createSectionRecords(dayRecords, 12, 23);
+
+  const fullDayRecords = createSectionRecords(dayRecords, 0, 23);
+  const timelineContent = isMobile ? (
+    <View style={styles.mobileTimelineWrapper}>
+      {renderTimelineSection({
+        sectionRecords: amRecords,
+        startHour: 0,
+        endHour: 11,
+        label: '0:00 AM - 11:59 AM',
+        isMobileSection: true,
+      })}
+      {renderTimelineSection({
+        sectionRecords: pmRecords,
+        startHour: 12,
+        endHour: 23,
+        label: '12:00 PM - 11:59 PM',
+        isMobileSection: true,
+      })}
+    </View>
+  ) : (
+    renderTimelineSection({
+      sectionRecords: fullDayRecords,
+      startHour: 0,
+      endHour: 23,
+      label: null,
+      isMobileSection: false,
+    })
+  );
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.dateLabel}>
+          {date.toLocaleDateString('zh-CN', {
+            month: 'long',
+            day: 'numeric',
+            weekday: 'long',
+          })}
+        </Text>
+        <Text style={styles.recordCount}>{dayRecords.length} 条记录</Text>
+      </View>
+
+      {timelineContent}
+
       <View style={styles.legend}>
         <View style={styles.legendItem}>
           <View style={[styles.legendDot, { backgroundColor: '#FF6B9D' }]} />
@@ -359,18 +362,35 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#7F8C8D',
   },
-  timelineContainer: {
-    position: 'relative',
-    height: 100,
-    marginBottom: 50,
+  timelineSectionWrapper: {
+    marginBottom: 16,
   },
-  timelineBackground: {
+  timelineSectionBackground: {
     position: 'relative',
     height: 40,
     backgroundColor: '#F5F5F5',
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#E0E0E0',
+  },
+  webTimelineContainer: {
+    marginBottom: 10,
+    height: 40,
+  },
+  mobileTimelineContainer: {
+    marginBottom: 6,
+    height: 40,
+  },
+  mobileTimelineWrapper: {
+    marginBottom: 16,
+  },
+  sectionLabel: {
+    fontSize: 12,
+    color: '#7F8C8D',
+    marginBottom: 6,
+  },
+  sectionLabelMobile: {
+    fontSize: 11,
   },
   hourMarker: {
     position: 'absolute',
