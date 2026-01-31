@@ -14,7 +14,7 @@ dist/
 # macOS
 .DS_Store
 
-# IDE
+# IDE - keep local; do not commit (avoids hardcoded paths e.g. git.path and env-specific settings)
 .vscode/
 .idea/
 
