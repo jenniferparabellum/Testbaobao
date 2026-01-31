@@ -128,7 +128,13 @@ export default function DayTimeline({ records, date }) {
   }
 
   // 计算每个记录在24小时时间轴上的位置（百分比）
-  const isMobile = Platform.OS !== 'web';
+  const isWeb = Platform.OS === 'web';
+  const isMobileNative = !isWeb;
+  const isMobileWeb =
+    isWeb &&
+    typeof navigator !== 'undefined' &&
+    /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  const shouldUseSplitTimeline = isMobileNative || isMobileWeb;
 
   const createSectionRecords = (recordsList, startHour, endHour) => {
     const rangeRecords = recordsList
@@ -279,7 +285,7 @@ export default function DayTimeline({ records, date }) {
   const pmRecords = createSectionRecords(dayRecords, 12, 23);
 
   const fullDayRecords = createSectionRecords(dayRecords, 0, 23);
-  const timelineContent = isMobile ? (
+  const timelineContent = shouldUseSplitTimeline ? (
     <View style={styles.mobileTimelineWrapper}>
       {renderTimelineSection({
         sectionRecords: amRecords,
